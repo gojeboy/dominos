@@ -68,7 +68,7 @@
       {:tile (first possible-tiles-for-start)
        :position :start})))
 
-(defn update-board [current-board domino]
+(defn update-board [current-board domino player-name]
   (let [{:keys [tile position]} domino
         joining-board-number (if (= position :start)
                                (ffirst current-board)
@@ -80,7 +80,19 @@
 
                               (= position :end) (if (= (first tile) joining-board-number)
                                                   tile
-                                                  (-> tile reverse vec)))]
+                                                  (-> tile reverse vec)))
+
+        msg (if (empty? rearranged-tile)
+              (str player-name " can't play to connect " (first current-board))
+
+              (if (= position :start)
+                (str player-name " plays " rearranged-tile " to connect to tile " (first current-board))
+                (str player-name " plays " rearranged-tile " to connect to tile " (last current-board))
+                ))]
+
+
+
+    (println msg)
 
     (if-not (nil? tile)
       (if (= position :start)
@@ -92,15 +104,14 @@
 (defn play [current-board player-key]
   (let [player (-> current-board player-key)
         selected-domino (select-domino (-> player :tiles) (-> current-board :board first) (-> current-board :board last))
-        _ (println (:name player) " : is now playing " selected-domino)
         remaining-tiles (disj (-> current-board player-key :tiles) (:tile selected-domino))
         updated-player (merge player {:tiles remaining-tiles})
-        new-board (update-board (:board current-board) selected-domino)
+        new-board (update-board (:board current-board) selected-domino (:name player))
         update {:board (vec (remove nil? new-board))
                 player-key updated-player}
         new-board (merge current-board  update)]
 
-    (println "This is how the board now look like after play :" (-> new-board :board))
+    (println "Board is now :" (-> new-board :board))
 
     new-board))
 
@@ -129,13 +140,11 @@
       (swap! board (fn [n]
                      (play n :player1)))
 
+
       (swap! board (fn [n]
                      (play n :player2)))
 
       (swap! i dec))
-
-    (spy tiles1)
-    (spy tiles2)
 
     (let [final-players [(-> @board :player1) (-> @board :player2)]
           winner (first (filter (fn [el] (= (-> el :tiles count) 0)) final-players))]
